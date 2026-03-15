@@ -8,6 +8,7 @@ Deploy: beam deploy fastapi_server.py
 """
 
 from beam import asgi, Image
+from textwrap import dedent
 
 
 image = Image(python_version="python3.11").add_python_packages([
@@ -56,9 +57,7 @@ def create_app(context):
     items_db: dict[int, ItemResponse] = {}
     item_counter = 0
     
-    @app.get("/", response_class=HTMLResponse)
-    async def home():
-        return """
+    HOME_HTML = dedent("""
         <!DOCTYPE html>
         <html>
         <head>
@@ -92,7 +91,11 @@ def create_app(context):
             </div>
         </body>
         </html>
-        """
+    """).strip()
+    
+    @app.get("/", response_class=HTMLResponse)
+    async def home():
+        return HOME_HTML
     
     @app.get("/health")
     async def health():

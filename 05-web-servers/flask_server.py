@@ -8,6 +8,7 @@ Deploy: beam deploy flask_server.py
 """
 
 from beam import asgi, Image
+from textwrap import dedent
 
 
 image = Image(python_version="python3.11").add_python_packages([
@@ -30,44 +31,44 @@ def create_app(context):
     
     app = Flask(__name__)
     
-    HTML_TEMPLATE = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Flask on Beam</title>
-        <style>
-            body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-            h1 { color: #333; }
-            .endpoint { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
-            code { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }
-        </style>
-    </head>
-    <body>
-        <h1>Flask on Beam</h1>
-        <p>Welcome to your Flask application running on Beam.cloud!</p>
-        
-        <h2>Available Endpoints</h2>
-        <div class="endpoint">
-            <strong>GET /</strong> - This page
-        </div>
-        <div class="endpoint">
-            <strong>GET /api/health</strong> - Health check
-        </div>
-        <div class="endpoint">
-            <strong>GET /api/info</strong> - Server info
-        </div>
-        <div class="endpoint">
-            <strong>POST /api/echo</strong> - Echo JSON payload
-        </div>
-        <div class="endpoint">
-            <strong>GET /api/items</strong> - List items
-        </div>
-        <div class="endpoint">
-            <strong>POST /api/items</strong> - Create item
-        </div>
-    </body>
-    </html>
-    """
+    HTML_TEMPLATE = dedent("""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Flask on Beam</title>
+            <style>
+                body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+                h1 { color: #333; }
+                .endpoint { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+                code { background: #e0e0e0; padding: 2px 6px; border-radius: 3px; }
+            </style>
+        </head>
+        <body>
+            <h1>Flask on Beam</h1>
+            <p>Welcome to your Flask application running on Beam.cloud!</p>
+            
+            <h2>Available Endpoints</h2>
+            <div class="endpoint">
+                <strong>GET /</strong> - This page
+            </div>
+            <div class="endpoint">
+                <strong>GET /api/health</strong> - Health check
+            </div>
+            <div class="endpoint">
+                <strong>GET /api/info</strong> - Server info
+            </div>
+            <div class="endpoint">
+                <strong>POST /api/echo</strong> - Echo JSON payload
+            </div>
+            <div class="endpoint">
+                <strong>GET /api/items</strong> - List items
+            </div>
+            <div class="endpoint">
+                <strong>POST /api/items</strong> - Create item
+            </div>
+        </body>
+        </html>
+    """).strip()
     
     items_db = []
     

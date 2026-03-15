@@ -8,6 +8,7 @@ Run: python port_exposure.py
 """
 
 from beam import Sandbox, Image, PythonVersion
+from textwrap import dedent
 import time
 
 
@@ -46,29 +47,33 @@ def expose_flask_app():
     
     sb = sandbox.create()
     
-    sb.process.run_code("""
-with open('/workspace/app.py', 'w') as f:
-    f.write('''
-from flask import Flask, jsonify
-import os
+    flask_app_code = dedent('''
+        from flask import Flask, jsonify
+        import os
 
-app = Flask(__name__)
+        app = Flask(__name__)
 
-@app.route("/")
-def home():
-    return jsonify({
-        "message": "Hello from Beam Sandbox!",
-        "status": "running"
-    })
+        @app.route("/")
+        def home():
+            return jsonify({
+                "message": "Hello from Beam Sandbox!",
+                "status": "running"
+            })
 
-@app.route("/health")
-def health():
-    return jsonify({"healthy": True})
+        @app.route("/health")
+        def health():
+            return jsonify({"healthy": True})
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-''')
-""")
+        if __name__ == "__main__":
+            app.run(host="0.0.0.0", port=5000)
+    ''').strip()
+    
+    setup_code = dedent(f"""
+        with open('/workspace/app.py', 'w') as f:
+            f.write('''{flask_app_code}''')
+    """).strip()
+    
+    sb.process.run_code(setup_code)
     
     sb.process.exec("python3", "/workspace/app.py")
     
@@ -116,33 +121,39 @@ def expose_multiple_ports():
     
     sb = sandbox.create()
     
-    sb.process.run_code("""
-with open('/workspace/api.py', 'w') as f:
-    f.write('''
-from flask import Flask, jsonify
-app = Flask(__name__)
+    api_code = dedent('''
+        from flask import Flask, jsonify
+        app = Flask(__name__)
 
-@app.route("/")
-def home():
-    return jsonify({"service": "API", "port": 5000})
+        @app.route("/")
+        def home():
+            return jsonify({"service": "API", "port": 5000})
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-''')
+        if __name__ == "__main__":
+            app.run(host="0.0.0.0", port=5000)
+    ''').strip()
+    
+    admin_code = dedent('''
+        from flask import Flask, jsonify
+        app = Flask(__name__)
 
-with open('/workspace/admin.py', 'w') as f:
-    f.write('''
-from flask import Flask, jsonify
-app = Flask(__name__)
+        @app.route("/")
+        def home():
+            return jsonify({"service": "Admin", "port": 5001})
 
-@app.route("/")
-def home():
-    return jsonify({"service": "Admin", "port": 5001})
+        if __name__ == "__main__":
+            app.run(host="0.0.0.0", port=5001)
+    ''').strip()
+    
+    setup_code = dedent(f"""
+        with open('/workspace/api.py', 'w') as f:
+            f.write('''{api_code}''')
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001)
-''')
-""")
+        with open('/workspace/admin.py', 'w') as f:
+            f.write('''{admin_code}''')
+    """).strip()
+    
+    sb.process.run_code(setup_code)
     
     sb.process.exec("python3", "/workspace/api.py")
     sb.process.exec("python3", "/workspace/admin.py")

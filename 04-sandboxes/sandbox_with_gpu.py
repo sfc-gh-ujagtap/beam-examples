@@ -8,6 +8,7 @@ Run: python sandbox_with_gpu.py
 """
 
 from beam import Sandbox, Image, PythonVersion
+from textwrap import dedent
 
 
 def gpu_sandbox():
@@ -27,35 +28,39 @@ def gpu_sandbox():
     sb = sandbox.create()
     print(f"GPU Sandbox created: {sb.container_id}")
     
-    result = sb.process.run_code("""
-import torch
+    gpu_info_code = dedent("""
+        import torch
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Device: {device}")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Device: {device}")
 
-if device == "cuda":
-    print(f"GPU: {torch.cuda.get_device_name(0)}")
-    print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
-""")
+        if device == "cuda":
+            print(f"GPU: {torch.cuda.get_device_name(0)}")
+            print(f"Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+    """).strip()
+    
+    result = sb.process.run_code(gpu_info_code)
     print(f"GPU Info:\n{result.result}")
     
-    result = sb.process.run_code("""
-import torch
-import time
+    benchmark_code = dedent("""
+        import torch
+        import time
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-size = 5000
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        size = 5000
 
-start = time.time()
-a = torch.randn(size, size, device=device)
-b = torch.randn(size, size, device=device)
-c = torch.matmul(a, b)
-if device == "cuda":
-    torch.cuda.synchronize()
-elapsed = time.time() - start
+        start = time.time()
+        a = torch.randn(size, size, device=device)
+        b = torch.randn(size, size, device=device)
+        c = torch.matmul(a, b)
+        if device == "cuda":
+            torch.cuda.synchronize()
+        elapsed = time.time() - start
 
-print(f"Matrix multiplication ({size}x{size}): {elapsed:.3f}s on {device}")
-""")
+        print(f"Matrix multiplication ({size}x{size}): {elapsed:.3f}s on {device}")
+    """).strip()
+    
+    result = sb.process.run_code(benchmark_code)
     print(f"Benchmark:\n{result.result}")
     
     sb.terminate()
@@ -78,23 +83,25 @@ def ml_inference_sandbox():
     
     sb = sandbox.create()
     
-    result = sb.process.run_code("""
-from transformers import pipeline
-import torch
+    inference_code = dedent("""
+        from transformers import pipeline
+        import torch
 
-device = 0 if torch.cuda.is_available() else -1
-classifier = pipeline("sentiment-analysis", device=device)
+        device = 0 if torch.cuda.is_available() else -1
+        classifier = pipeline("sentiment-analysis", device=device)
 
-texts = [
-    "I love using Beam for ML inference!",
-    "This is terrible and I hate it.",
-    "The weather is okay today.",
-]
+        texts = [
+            "I love using Beam for ML inference!",
+            "This is terrible and I hate it.",
+            "The weather is okay today.",
+        ]
 
-results = classifier(texts)
-for text, result in zip(texts, results):
-    print(f"{result['label']} ({result['score']:.2f}): {text[:50]}")
-""")
+        results = classifier(texts)
+        for text, result in zip(texts, results):
+            print(f"{result['label']} ({result['score']:.2f}): {text[:50]}")
+    """).strip()
+    
+    result = sb.process.run_code(inference_code)
     print(f"Inference results:\n{result.result}")
     
     sb.terminate()

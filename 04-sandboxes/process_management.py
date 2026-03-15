@@ -8,6 +8,7 @@ Run: python process_management.py
 """
 
 from beam import Sandbox, Image, PythonVersion
+from textwrap import dedent
 import time
 
 
@@ -46,18 +47,22 @@ def background_process():
     
     sb = sandbox.create()
     
-    sb.process.run_code("""
-with open('/workspace/server.py', 'w') as f:
-    f.write('''
-import time
-import sys
+    server_code = dedent('''
+        import time
+        import sys
 
-for i in range(10):
-    print(f"Processing item {i+1}/10...", flush=True)
-    time.sleep(0.5)
-print("Done!", flush=True)
-''')
-""")
+        for i in range(10):
+            print(f"Processing item {i+1}/10...", flush=True)
+            time.sleep(0.5)
+        print("Done!", flush=True)
+    ''').strip()
+    
+    setup_code = dedent(f"""
+        with open('/workspace/server.py', 'w') as f:
+            f.write('''{server_code}''')
+    """).strip()
+    
+    sb.process.run_code(setup_code)
     
     process = sb.process.exec("python3", "/workspace/server.py")
     
@@ -83,10 +88,12 @@ def run_with_working_directory():
     
     sb.process.exec("mkdir", "-p", "/workspace/project/src")
     
-    sb.process.run_code("""
-with open('/workspace/project/src/main.py', 'w') as f:
-    f.write('print("Hello from src directory!")')
-""")
+    setup_code = dedent("""
+        with open('/workspace/project/src/main.py', 'w') as f:
+            f.write('print("Hello from src directory!")')
+    """).strip()
+    
+    sb.process.run_code(setup_code)
     
     process = sb.process.exec("python3", "main.py", cwd="/workspace/project/src")
     print(f"Output: {process.logs.read()}")
@@ -109,12 +116,14 @@ def install_and_run():
     process = sb.process.exec("pip", "install", "requests", "-q")
     process.wait()
     
-    result = sb.process.run_code("""
-import requests
-response = requests.get('https://httpbin.org/json')
-print(f"Status: {response.status_code}")
-print(f"Data: {response.json()['slideshow']['title']}")
-""")
+    request_code = dedent("""
+        import requests
+        response = requests.get('https://httpbin.org/json')
+        print(f"Status: {response.status_code}")
+        print(f"Data: {response.json()['slideshow']['title']}")
+    """).strip()
+    
+    result = sb.process.run_code(request_code)
     print(f"Output:\n{result.result}")
     
     sb.terminate()

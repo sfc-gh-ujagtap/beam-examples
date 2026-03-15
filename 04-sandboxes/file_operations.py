@@ -8,6 +8,7 @@ Run: python file_operations.py
 """
 
 from beam import Sandbox, Image, PythonVersion
+from textwrap import dedent
 import tempfile
 import os
 
@@ -34,19 +35,21 @@ def upload_and_process():
     print(f"Uploading {local_file} to sandbox...")
     sb.fs.upload_file(local_file, "/workspace/data.csv")
     
-    result = sb.process.run_code("""
-import pandas as pd
+    process_code = dedent("""
+        import pandas as pd
 
-df = pd.read_csv('/workspace/data.csv')
-print("Original data:")
-print(df)
+        df = pd.read_csv('/workspace/data.csv')
+        print("Original data:")
+        print(df)
 
-df['doubled'] = df['value'] * 2
-df['squared'] = df['value'] ** 2
+        df['doubled'] = df['value'] * 2
+        df['squared'] = df['value'] ** 2
 
-df.to_csv('/workspace/processed.csv', index=False)
-print("\\nProcessed data saved to /workspace/processed.csv")
-""")
+        df.to_csv('/workspace/processed.csv', index=False)
+        print("\\nProcessed data saved to /workspace/processed.csv")
+    """).strip()
+    
+    result = sb.process.run_code(process_code)
     print(f"Processing output:\n{result.result}")
     
     output_file = tempfile.mktemp(suffix='.csv')
@@ -72,26 +75,26 @@ def upload_script_and_run():
     
     sb = sandbox.create()
     
-    script_content = '''
-import json
-from datetime import datetime
+    script_content = dedent('''
+        import json
+        from datetime import datetime
 
-def generate_report():
-    report = {
-        "timestamp": datetime.now().isoformat(),
-        "status": "success",
-        "metrics": {
-            "processed_items": 150,
-            "success_rate": 0.98,
-            "average_time_ms": 45.2,
-        }
-    }
-    return report
+        def generate_report():
+            report = {
+                "timestamp": datetime.now().isoformat(),
+                "status": "success",
+                "metrics": {
+                    "processed_items": 150,
+                    "success_rate": 0.98,
+                    "average_time_ms": 45.2,
+                }
+            }
+            return report
 
-if __name__ == "__main__":
-    report = generate_report()
-    print(json.dumps(report, indent=2))
-'''
+        if __name__ == "__main__":
+            report = generate_report()
+            print(json.dumps(report, indent=2))
+    ''').strip()
     
     with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
         f.write(script_content)
@@ -116,23 +119,27 @@ def list_files():
     
     sb = sandbox.create()
     
-    sb.process.run_code("""
-import os
-os.makedirs('/workspace/data', exist_ok=True)
-with open('/workspace/data/file1.txt', 'w') as f:
-    f.write('Hello')
-with open('/workspace/data/file2.txt', 'w') as f:
-    f.write('World')
-""")
+    setup_code = dedent("""
+        import os
+        os.makedirs('/workspace/data', exist_ok=True)
+        with open('/workspace/data/file1.txt', 'w') as f:
+            f.write('Hello')
+        with open('/workspace/data/file2.txt', 'w') as f:
+            f.write('World')
+    """).strip()
     
-    result = sb.process.run_code("""
-import os
-for root, dirs, files in os.walk('/workspace'):
-    for file in files:
-        path = os.path.join(root, file)
-        size = os.path.getsize(path)
-        print(f"{path}: {size} bytes")
-""")
+    sb.process.run_code(setup_code)
+    
+    list_code = dedent("""
+        import os
+        for root, dirs, files in os.walk('/workspace'):
+            for file in files:
+                path = os.path.join(root, file)
+                size = os.path.getsize(path)
+                print(f"{path}: {size} bytes")
+    """).strip()
+    
+    result = sb.process.run_code(list_code)
     print(f"Files in sandbox:\n{result.result}")
     
     sb.terminate()

@@ -8,6 +8,7 @@ Run: python snapshots.py
 """
 
 from beam import Sandbox, Image, PythonVersion
+from textwrap import dedent
 import time
 
 
@@ -24,36 +25,38 @@ def create_and_snapshot():
     
     sb = sandbox.create()
     
-    sb.process.run_code("""
-import os
-os.makedirs('/workspace/data', exist_ok=True)
-os.makedirs('/workspace/models', exist_ok=True)
-os.makedirs('/workspace/config', exist_ok=True)
+    setup_code = dedent("""
+        import os
+        os.makedirs('/workspace/data', exist_ok=True)
+        os.makedirs('/workspace/models', exist_ok=True)
+        os.makedirs('/workspace/config', exist_ok=True)
 
-with open('/workspace/config/settings.json', 'w') as f:
-    import json
-    json.dump({
-        'model_version': '1.0',
-        'batch_size': 32,
-        'learning_rate': 0.001
-    }, f)
+        with open('/workspace/config/settings.json', 'w') as f:
+            import json
+            json.dump({
+                'model_version': '1.0',
+                'batch_size': 32,
+                'learning_rate': 0.001
+            }, f)
 
-import numpy as np
-model_weights = np.random.randn(100, 50)
-np.save('/workspace/models/weights.npy', model_weights)
+        import numpy as np
+        model_weights = np.random.randn(100, 50)
+        np.save('/workspace/models/weights.npy', model_weights)
 
-import pandas as pd
-df = pd.DataFrame({
-    'id': range(1000),
-    'value': np.random.randn(1000)
-})
-df.to_parquet('/workspace/data/dataset.parquet')
+        import pandas as pd
+        df = pd.DataFrame({
+            'id': range(1000),
+            'value': np.random.randn(1000)
+        })
+        df.to_parquet('/workspace/data/dataset.parquet')
 
-print("Environment setup complete!")
-print("Files created:")
-import subprocess
-subprocess.run(['find', '/workspace', '-type', 'f'])
-""")
+        print("Environment setup complete!")
+        print("Files created:")
+        import subprocess
+        subprocess.run(['find', '/workspace', '-type', 'f'])
+    """).strip()
+    
+    sb.process.run_code(setup_code)
     
     print("\nCreating filesystem snapshot (image)...")
     image_id = sb.create_image_from_filesystem()
@@ -69,29 +72,31 @@ def restore_from_image(image_id: str):
     print(f"\nRestoring sandbox from image: {image_id}")
     
     sandbox = Sandbox(
-        image=Image(image_id=image_id),  # Use Image with image_id parameter
+        image=Image(image_id=image_id),
     )
     
     sb = sandbox.create()
     print(f"Sandbox restored: {sb.container_id}")
     
-    result = sb.process.run_code("""
-import os
-import json
-import numpy as np
-import pandas as pd
+    verify_code = dedent("""
+        import os
+        import json
+        import numpy as np
+        import pandas as pd
 
-with open('/workspace/config/settings.json', 'r') as f:
-    config = json.load(f)
-print(f"Config: {config}")
+        with open('/workspace/config/settings.json', 'r') as f:
+            config = json.load(f)
+        print(f"Config: {config}")
 
-weights = np.load('/workspace/models/weights.npy')
-print(f"Model weights shape: {weights.shape}")
+        weights = np.load('/workspace/models/weights.npy')
+        print(f"Model weights shape: {weights.shape}")
 
-df = pd.read_parquet('/workspace/data/dataset.parquet')
-print(f"Dataset shape: {df.shape}")
-print(f"Dataset stats: mean={df['value'].mean():.3f}, std={df['value'].std():.3f}")
-""")
+        df = pd.read_parquet('/workspace/data/dataset.parquet')
+        print(f"Dataset shape: {df.shape}")
+        print(f"Dataset stats: mean={df['value'].mean():.3f}, std={df['value'].std():.3f}")
+    """).strip()
+    
+    result = sb.process.run_code(verify_code)
     print(f"Restored data:\n{result.result}")
     
     sb.terminate()
@@ -110,30 +115,36 @@ def snapshot_workflow():
     sb = sandbox.create()
     
     print("\n1. Initial setup...")
-    sb.process.run_code("""
-with open('/workspace/counter.txt', 'w') as f:
-    f.write('0')
-print("Counter initialized to 0")
-""")
+    init_code = dedent("""
+        with open('/workspace/counter.txt', 'w') as f:
+            f.write('0')
+        print("Counter initialized to 0")
+    """).strip()
+    
+    sb.process.run_code(init_code)
     
     print("\n2. Taking filesystem snapshot...")
     image_id = sb.create_image_from_filesystem()
     print(f"Image ID: {image_id}")
     
     print("\n3. Modifying state...")
-    sb.process.run_code("""
-with open('/workspace/counter.txt', 'r') as f:
-    count = int(f.read())
-count += 100
-with open('/workspace/counter.txt', 'w') as f:
-    f.write(str(count))
-print(f"Counter updated to {count}")
-""")
+    modify_code = dedent("""
+        with open('/workspace/counter.txt', 'r') as f:
+            count = int(f.read())
+        count += 100
+        with open('/workspace/counter.txt', 'w') as f:
+            f.write(str(count))
+        print(f"Counter updated to {count}")
+    """).strip()
     
-    result = sb.process.run_code("""
-with open('/workspace/counter.txt', 'r') as f:
-    print(f"Current counter value: {f.read()}")
-""")
+    sb.process.run_code(modify_code)
+    
+    check_code = dedent("""
+        with open('/workspace/counter.txt', 'r') as f:
+            print(f"Current counter value: {f.read()}")
+    """).strip()
+    
+    result = sb.process.run_code(check_code)
     print(f"After modification: {result.result}")
     
     sb.terminate()
@@ -142,10 +153,12 @@ with open('/workspace/counter.txt', 'r') as f:
     sandbox_restored = Sandbox(image=Image(image_id=image_id))
     sb_restored = sandbox_restored.create()
     
-    result = sb_restored.process.run_code("""
-with open('/workspace/counter.txt', 'r') as f:
-    print(f"Restored counter value: {f.read()}")
-""")
+    restore_check_code = dedent("""
+        with open('/workspace/counter.txt', 'r') as f:
+            print(f"Restored counter value: {f.read()}")
+    """).strip()
+    
+    result = sb_restored.process.run_code(restore_check_code)
     print(f"After restore: {result.result}")
     
     sb_restored.terminate()

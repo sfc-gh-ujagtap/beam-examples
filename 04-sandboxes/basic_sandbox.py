@@ -8,6 +8,7 @@ Run: python basic_sandbox.py
 """
 
 from beam import Sandbox, Image, PythonVersion
+from textwrap import dedent
 
 
 def basic_example():
@@ -24,17 +25,19 @@ def basic_example():
     result = sb.process.run_code("print('Hello from the sandbox!')")
     print(f"Output: {result.result}")
     
-    result = sb.process.run_code("""
-import sys
-import platform
+    system_info_code = dedent("""
+        import sys
+        import platform
 
-info = {
-    'python_version': sys.version,
-    'platform': platform.platform(),
-    'processor': platform.processor(),
-}
-print(info)
-""")
+        info = {
+            'python_version': sys.version,
+            'platform': platform.platform(),
+            'processor': platform.processor(),
+        }
+        print(info)
+    """).strip()
+    
+    result = sb.process.run_code(system_info_code)
     print(f"System info: {result.result}")
     
     sb.terminate()
@@ -54,14 +57,16 @@ def sandbox_with_packages():
     
     sb = sandbox.create()
     
-    result = sb.process.run_code("""
-import numpy as np
-import pandas as pd
+    data_code = dedent("""
+        import numpy as np
+        import pandas as pd
 
-arr = np.array([1, 2, 3, 4, 5])
-df = pd.DataFrame({'values': arr, 'squared': arr ** 2})
-print(df.to_string())
-""")
+        arr = np.array([1, 2, 3, 4, 5])
+        df = pd.DataFrame({'values': arr, 'squared': arr ** 2})
+        print(df.to_string())
+    """).strip()
+    
+    result = sb.process.run_code(data_code)
     print(f"Output:\n{result.result}")
     
     sb.terminate()
