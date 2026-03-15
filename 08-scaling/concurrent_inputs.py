@@ -17,16 +17,15 @@ from beam import endpoint, Image
     image=Image(python_version="python3.11").add_python_packages([
         "numpy",
     ]),
-    concurrent_inputs=10,  # Handle up to 10 inputs per container
 )
 def batch_handler(**inputs):
     """
-    Process multiple inputs concurrently in one container.
+    Process batch data in a single request.
     
-    With concurrent_inputs=10, a single container can process
-    up to 10 requests simultaneously using async/threading.
+    For handling multiple items, pass them as a list in the request
+    and process them within the handler.
     
-    Best for I/O-bound workloads (API calls, database queries).
+    Best for batch processing workloads.
     """
     import numpy as np
     import time
@@ -53,14 +52,13 @@ def batch_handler(**inputs):
     image=Image(python_version="python3.11").add_python_packages([
         "httpx",
     ]),
-    concurrent_inputs=20,  # High concurrency for I/O-bound work
-    workers=2,  # 2 containers, each handling 20 concurrent requests
+    workers=2,  # 2 containers handling requests
 )
 async def io_bound_handler(**inputs):
     """
     Async endpoint for I/O-bound operations.
     
-    Total capacity: workers * concurrent_inputs = 2 * 20 = 40 concurrent requests
+    With workers=2, can handle 2 concurrent requests.
     """
     import httpx
     import asyncio
@@ -84,14 +82,14 @@ async def io_bound_handler(**inputs):
     image=Image(python_version="python3.11").add_python_packages([
         "numpy",
     ]),
-    concurrent_inputs=4,  # Lower for CPU-bound work
+    workers=4,  # Multiple workers for CPU-bound work
 )
 def mixed_workload_handler(**inputs):
     """
     Mixed I/O and CPU workload.
     
-    For CPU-bound work, keep concurrent_inputs lower
-    to avoid overloading the CPU.
+    Uses multiple workers to handle concurrent requests
+    for CPU-bound work.
     """
     import numpy as np
     import time
@@ -113,28 +111,12 @@ def mixed_workload_handler(**inputs):
 
 
 if __name__ == "__main__":
-    import concurrent.futures
-    import time
-    
-    print("Testing concurrent inputs...")
+    print("Batch Processing Examples")
     print("=" * 50)
-    
-    inputs_list = [
-        {"data": [1, 2, 3]},
-        {"data": [4, 5, 6]},
-        {"data": [7, 8, 9]},
-        {"data": [10, 11, 12]},
-        {"data": [13, 14, 15]},
-    ]
-    
-    start = time.time()
-    
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        futures = [executor.submit(batch_handler.remote, **inp) for inp in inputs_list]
-        results = [f.result() for f in futures]
-    
-    elapsed = time.time() - start
-    
-    print(f"\n5 requests processed in {elapsed:.2f}s")
-    for r in results:
-        print(f"  Input {r['input']}: sum={r['sum']}, thread={r['thread_id']}")
+    print("\nTo test, deploy the endpoint:")
+    print("  beam deploy concurrent_inputs.py:batch_handler")
+    print("\nThen send a request with data:")
+    print("  curl -X POST '[ENDPOINT_URL]' \\")
+    print("    -H 'Authorization: Bearer [TOKEN]' \\")
+    print("    -H 'Content-Type: application/json' \\")
+    print("    -d '{\"data\": [1, 2, 3, 4, 5]}'")

@@ -78,27 +78,19 @@ def multi_secret_handler(**inputs):
     cpu=1,
     memory="256Mi",
     image=Image(python_version="python3.11"),
-    env_vars={
-        "APP_ENV": "production",
-        "LOG_LEVEL": "info",
-        "MAX_RETRIES": "3",
-    },
-    secrets=["API_KEY"],  # Secrets + env vars together
+    secrets=["API_KEY"],  # Secrets injected as env vars
 )
 def env_vars_handler(**inputs):
     """
-    Endpoint with both env vars and secrets.
+    Endpoint with secrets.
     
-    - env_vars: Non-sensitive configuration
-    - secrets: Sensitive credentials (encrypted)
+    Secrets are injected as environment variables.
     """
     import os
     
     return {
-        "app_env": os.environ.get("APP_ENV"),
-        "log_level": os.environ.get("LOG_LEVEL"),
-        "max_retries": os.environ.get("MAX_RETRIES"),
         "api_key_configured": bool(os.environ.get("API_KEY")),
+        "api_key_prefix": os.environ.get("API_KEY", "")[:10] + "..." if os.environ.get("API_KEY") else None,
     }
 
 

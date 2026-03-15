@@ -108,23 +108,15 @@ def gpu_concurrent_handler(**inputs):
 
 
 if __name__ == "__main__":
-    import concurrent.futures
-    import time
-    
-    print("Testing concurrent requests...")
+    print("Concurrency Examples")
     print("=" * 50)
-    
-    def make_request(i):
-        return handler.remote(delay=2)
-    
-    start = time.time()
-    
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(make_request, i) for i in range(4)]
-        results = [f.result() for f in futures]
-    
-    elapsed = time.time() - start
-    
-    print(f"\n4 requests with 2s delay each:")
-    print(f"Total time: {elapsed:.2f}s (should be ~2s with 4 workers)")
-    print(f"Worker PIDs: {[r['worker_id'] for r in results]}")
+    print("\nTo test concurrent workers, deploy the endpoint:")
+    print("  beam deploy concurrency.py:handler")
+    print("\nThen send multiple concurrent requests:")
+    print("  for i in {1..4}; do")
+    print("    curl -X POST '[ENDPOINT_URL]' \\")
+    print("      -H 'Authorization: Bearer [TOKEN]' \\")
+    print("      -H 'Content-Type: application/json' \\")
+    print("      -d '{\"delay\": 2}' &")
+    print("  done")
+    print("\nWith workers=4, all 4 requests should complete in ~2s total.")

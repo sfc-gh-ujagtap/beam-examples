@@ -4,10 +4,17 @@ Signals Example
 Send events between Beam apps for coordination.
 Great for triggering workflows and notifications.
 
+NOTE: Signal feature may not be available in all Beam SDK versions.
+Check beam.cloud documentation for current availability.
+
 Deploy: beam deploy signals.py:sender
 """
 
-from beam import endpoint, function, Image, Signal
+try:
+    from beam import endpoint, function, Image, Signal
+except ImportError:
+    from beam import endpoint, function, Image
+    Signal = None  # Signal not available in this SDK version
 
 
 @endpoint(
