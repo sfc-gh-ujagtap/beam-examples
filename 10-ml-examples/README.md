@@ -1,91 +1,67 @@
 # ML Examples
 
-Production-ready machine learning examples using popular frameworks and models.
+Production-ready machine learning inference using HuggingFace Transformers.
 
-## Examples
+## Example
 
 | File | Description |
 |------|-------------|
-| `huggingface_inference.py` | HuggingFace models (sentiment, NER, generation) |
-| `vllm_server.py` | High-throughput LLM serving with vLLM |
-| `whisper_transcription.py` | Audio transcription with Whisper |
+| `huggingface_inference.py` | Sentiment analysis, NER, text generation |
 
-## HuggingFace Inference
+## Endpoints
 
-```python
-from transformers import pipeline
+### 1. Sentiment Analysis
+Classify text as positive or negative.
 
-def load_model():
-    return pipeline("sentiment-analysis", device=0)
-
-@endpoint(on_start=load_model, gpu="A10G")
-def predict(context, **inputs):
-    model = context.on_start_value
-    return model(inputs["text"])
-```
-
-**Deploy:**
 ```bash
 beam deploy huggingface_inference.py:sentiment
 ```
 
-## vLLM Server
-
-High-throughput LLM inference with PagedAttention:
-
-```python
-from vllm import LLM, SamplingParams
-
-def load_model():
-    return LLM(model="meta-llama/Llama-2-7b-chat-hf")
-
-@endpoint(on_start=load_model, gpu="A10G", memory="32Gi")
-def generate(context, **inputs):
-    model = context.on_start_value
-    outputs = model.generate([inputs["prompt"]], SamplingParams())
-    return {"text": outputs[0].outputs[0].text}
+```bash
+curl -X POST '[URL]' \
+  -H 'Authorization: Bearer [TOKEN]' \
+  -d '{"text": "I love this product!"}'
 ```
 
-**Features:**
-- OpenAI-compatible API format
-- Efficient batching
-- PagedAttention for memory efficiency
-
-## Whisper Transcription
-
-```python
-import whisper
-
-def load_model():
-    return whisper.load_model("base")
-
-@endpoint(on_start=load_model, gpu="A10G")
-def transcribe(context, **inputs):
-    model = context.on_start_value
-    result = model.transcribe(audio_path)
-    return {"text": result["text"]}
+**Response:**
+```json
+{"results": [{"text": "I love this product!", "label": "POSITIVE", "score": 0.9999}]}
 ```
 
-**Features:**
-- Multiple model sizes (tiny, base, small, medium, large)
-- Language detection
-- Timestamp segments
+### 2. Named Entity Recognition (NER)
+Extract entities (people, organizations, locations) from text.
+
+```bash
+beam deploy huggingface_inference.py:ner
+```
+
+```bash
+curl -X POST '[URL]' \
+  -d '{"text": "Apple Inc. was founded by Steve Jobs in California."}'
+```
+
+### 3. Text Generation
+Generate text continuations using GPT-2.
+
+```bash
+beam deploy huggingface_inference.py:generate
+```
+
+```bash
+curl -X POST '[URL]' \
+  -d '{"prompt": "Once upon a time", "max_length": 50}'
+```
+
+## Key Features Demonstrated
+
+- **`on_start`** - Pre-load models at container startup
+- **`keep_warm_seconds`** - Keep containers warm to reduce cold starts
+- **`Volume`** - Cache model weights across invocations
+- **`gpu="A10G"`** - GPU acceleration for inference
 
 ## Best Practices
 
-1. **Pre-load models** with `on_start` to avoid loading on each request
-2. **Use volumes** to cache model weights across containers
-3. **Set `keep_warm_seconds`** to reduce cold starts for ML endpoints
-4. **Use task queues** for long-running inference (>180s)
-5. **Match GPU to model size**:
-   - A10G (24GB): Most models up to 13B parameters
-   - H100 (80GB): Large models, training
-
-## GPU Selection
-
-| Model Size | Recommended GPU |
-|------------|-----------------|
-| <7B params | A10G (24GB) |
-| 7B-13B params | A10G or RTX4090 |
-| 13B-70B params | H100 (80GB) |
-| Training | H100 |
+1. **Pre-load models** with `on_start` - avoids loading on each request
+2. **Use volumes** to cache model weights - faster cold starts
+3. **Set `keep_warm_seconds`** - reduces latency for subsequent requests
+4. **Batch inputs** - pass multiple texts in one request for efficiency

@@ -391,21 +391,19 @@ def handler(**inputs):
 
 ### 10-ml-examples - Machine Learning
 
-**What it demonstrates:** Production ML inference patterns with popular frameworks.
+**What it demonstrates:** Production ML inference with HuggingFace Transformers.
 
 | File | Description | Key Features |
 |------|-------------|--------------|
-| `huggingface_inference.py` | HuggingFace models | Transformers, sentiment, NER |
-| `vllm_server.py` | vLLM inference server | High-throughput LLM serving |
-| `whisper_transcription.py` | Audio transcription | OpenAI Whisper |
+| `huggingface_inference.py` | Sentiment, NER, text generation | GPU, model preloading, caching |
 
 **Key Beam Features Used:**
-- GPU allocation for inference
-- Model caching with Volumes
-- `on_start` for model preloading
+- `gpu="A10G"` for GPU acceleration
+- `on_start` for model preloading (load once, reuse)
+- `Volume` for caching model weights
 - `keep_warm_seconds` for low latency
 
-**Example - HuggingFace Sentiment Analysis:**
+**Example - Sentiment Analysis:**
 ```python
 from beam import endpoint, Image, Volume
 
@@ -422,6 +420,12 @@ def load_model():
 def sentiment(context, **inputs):
     model = context.on_start_value
     return model(inputs["text"])
+```
+
+**Test it:**
+```bash
+curl -X POST '[URL]' -d '{"text": "I love this product!"}'
+# {"results": [{"label": "POSITIVE", "score": 0.9999}]}
 ```
 
 ---
