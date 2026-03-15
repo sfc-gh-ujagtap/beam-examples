@@ -316,19 +316,21 @@ def load_model():
 | File | Description | Key Features |
 |------|-------------|--------------|
 | `concurrency.py` | Multiple workers | Concurrent request handling |
+| `batch_processing.py` | Batch and async handlers | Efficient processing |
 | `distributed_map.py` | Parallel map operations | Fan-out processing |
 | `distributed_queue.py` | Queue-based distribution | Work queue patterns |
 
 **Key Beam Features Used:**
-- `max_containers` for concurrency limits
+- `workers` parameter for horizontal scaling
 - `.map()` for parallel fan-out
 - Queue-based work distribution
+- Async handlers for I/O-bound work
 
 **Scaling Patterns:**
 
 1. **Horizontal Scaling** - Multiple containers handling requests:
 ```python
-@endpoint(max_containers=10)  # Up to 10 concurrent containers
+@endpoint(workers=4)  # 4 containers handling requests in parallel
 def handler(**inputs):
     ...
 ```
@@ -350,7 +352,6 @@ results = list(process_item.map(items))  # Distributed across workers
 | `preload_models.py` | Load models on startup | `on_start` hook |
 | `keep_warm.py` | Keep containers warm | Reduced cold starts |
 | `secrets.py` | Environment secrets | Secure credential storage |
-| `signals.py` | Inter-app communication | Event-driven patterns |
 
 **Key Beam Features Used:**
 
@@ -384,18 +385,6 @@ beam secret create DATABASE_URL "postgresql://..."
 def handler(**inputs):
     import os
     api_key = os.environ["OPENAI_API_KEY"]
-```
-
-**4. Signals (Inter-App Communication):**
-```python
-from beam import Signal
-
-# Sender
-signal = Signal(name="my-channel")
-signal.send({"event": "user_signup", "user_id": 123})
-
-# Receiver
-message = signal.recv(timeout=30)
 ```
 
 ---
